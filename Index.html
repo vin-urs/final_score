@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Score Tracker</title>
+  <title>Vertical Round Score Tracker</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -29,11 +29,14 @@
     th {
       background-color: #f5f5f5;
     }
+    td input {
+      width: 60px;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Game Score Tracker</h1>
+  <h1>Vertical Round Score Tracker</h1>
 
   <h3>Add Player</h3>
   <input type="text" id="playerNameInput" placeholder="Player name" />
@@ -45,43 +48,46 @@
 
   <h3>Scoreboard</h3>
   <table id="scoreTable">
-    <!-- Table will be built dynamically -->
+    <!-- Dynamic Table -->
   </table>
 
   <script>
     let players = [];
-    let rounds = 0;
+    let rounds = [];
 
     function addPlayer() {
       const name = document.getElementById('playerNameInput').value.trim();
       if (!name) return alert('Enter a player name.');
-      if (players.some(p => p.name === name)) return alert('Player already exists.');
+      if (players.includes(name)) return alert('Player already exists.');
 
-      players.push({ name, scores: [] });
+      players.push(name);
+      for (const round of rounds) {
+        round.scores.push(0);
+      }
       document.getElementById('playerNameInput').value = '';
       renderTable();
     }
 
     function addRound() {
-      rounds++;
-      for (const player of players) {
-        player.scores.push(0); // default score is 0
-      }
+      const newRound = {
+        scores: Array(players.length).fill(0)
+      };
+      rounds.push(newRound);
       renderTable();
     }
 
-    function updateScore(playerIndex, roundIndex, value) {
+    function updateScore(roundIndex, playerIndex, value) {
       const score = parseInt(value);
       if (!isNaN(score)) {
-        players[playerIndex].scores[roundIndex] = score;
-        renderTable(); // re-render to update totals
+        rounds[roundIndex].scores[playerIndex] = score;
+        renderTable(); // refresh totals
       }
     }
 
     function resetGame() {
       if (confirm('Reset the game? This will clear all data.')) {
         players = [];
-        rounds = 0;
+        rounds = [];
         renderTable();
       }
     }
@@ -90,37 +96,46 @@
       const table = document.getElementById('scoreTable');
       table.innerHTML = '';
 
-      // Header
-      const headerRow = document.createElement('tr');
-      headerRow.innerHTML = `<th>Player</th>`;
-      for (let i = 0; i < rounds; i++) {
-        headerRow.innerHTML += `<th>Round ${i + 1}</th>`;
+      if (players.length === 0) {
+        table.innerHTML = '<tr><td colspan="100%">No players yet.</td></tr>';
+        return;
       }
-      headerRow.innerHTML += `<th>Total</th>`;
+
+      // Header row
+      const headerRow = document.createElement('tr');
+      headerRow.innerHTML = `<th>Round</th>`;
+      for (const player of players) {
+        headerRow.innerHTML += `<th>${player}</th>`;
+      }
       table.appendChild(headerRow);
 
-      // Player Rows
-      players.forEach((player, pIndex) => {
+      // Round rows
+      rounds.forEach((round, roundIndex) => {
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${player.name}</td>`;
-
-        let total = 0;
-
-        for (let rIndex = 0; rIndex < rounds; rIndex++) {
-          const score = player.scores[rIndex] || 0;
-          total += score;
-
+        row.innerHTML = `<td>Round ${roundIndex + 1}</td>`;
+        round.scores.forEach((score, playerIndex) => {
           row.innerHTML += `
             <td>
               <input type="number" value="${score}" 
-                onchange="updateScore(${pIndex}, ${rIndex}, this.value)" 
-                style="width: 60px;" />
+                onchange="updateScore(${roundIndex}, ${playerIndex}, this.value)" />
             </td>`;
-        }
-
-        row.innerHTML += `<td><strong>${total}</strong></td>`;
+        });
         table.appendChild(row);
       });
+
+      // Totals row
+      const totalRow = document.createElement('tr');
+      totalRow.innerHTML = `<td><strong>Total</strong></td>`;
+
+      players.forEach((_, playerIndex) => {
+        let total = 0;
+        for (const round of rounds) {
+          total += round.scores[playerIndex] || 0;
+        }
+        totalRow.innerHTML += `<td><strong>${total}</strong></td>`;
+      });
+
+      table.appendChild(totalRow);
     }
   </script>
 
