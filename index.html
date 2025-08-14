@@ -1,143 +1,367 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Vertical Round Score Tracker</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-    }
-    input[type="text"], input[type="number"] {
-      padding: 5px;
-      margin: 5px;
-    }
-    button {
-      padding: 6px 12px;
-      margin: 5px;
-    }
-    table {
-      border-collapse: collapse;
-      margin-top: 20px;
-      width: 100%;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f5f5f5;
-    }
-    td input {
-      width: 60px;
-    }
-  </style>
-</head>
-<body>
-
-  <h1>Vertical Round Score Tracker</h1>
-
-  <h3>Add Player</h3>
-  <input type="text" id="playerNameInput" placeholder="Player name" />
-  <button onclick="addPlayer()">Add Player</button>
-
-  <h3>Controls</h3>
-  <button onclick="addRound()">Add Round</button>
-  <button onclick="resetGame()">Reset Game</button>
-
-  <h3>Scoreboard</h3>
-  <table id="scoreTable">
-    <!-- Dynamic Table -->
-  </table>
-
-  <script>
-    let players = [];
-    let rounds = [];
-
-    function addPlayer() {
-      const name = document.getElementById('playerNameInput').value.trim();
-      if (!name) return alert('Enter a player name.');
-      if (players.includes(name)) return alert('Player already exists.');
-
-      players.push(name);
-      for (const round of rounds) {
-        round.scores.push(0);
-      }
-      document.getElementById('playerNameInput').value = '';
-      renderTable();
-    }
-
-    function addRound() {
-      const newRound = {
-        scores: Array(players.length).fill(0)
-      };
-      rounds.push(newRound);
-      renderTable();
-    }
-
-    function updateScore(roundIndex, playerIndex, value) {
-      const score = parseInt(value);
-      if (!isNaN(score)) {
-        rounds[roundIndex].scores[playerIndex] = score;
-        renderTable(); // refresh totals
-      }
-    }
-
-    function resetGame() {
-      if (confirm('Reset the game? This will clear all data.')) {
-        players = [];
-        rounds = [];
-        renderTable();
-      }
-    }
-
-    function renderTable() {
-      const table = document.getElementById('scoreTable');
-      table.innerHTML = '';
-
-      if (players.length === 0) {
-        table.innerHTML = '<tr><td colspan="100%">No players yet.</td></tr>';
-        return;
-      }
-
-      // Header row
-      const headerRow = document.createElement('tr');
-      headerRow.innerHTML = `<th>Round</th>`;
-      for (const player of players) {
-        headerRow.innerHTML += `<th>${player}</th>`;
-      }
-      table.appendChild(headerRow);
-
-      // Round rows
-      rounds.forEach((round, roundIndex) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>Round ${roundIndex + 1}</td>`;
-        round.scores.forEach((score, playerIndex) => {
-          row.innerHTML += `
-            <td>
-              <input type="number" value="${score}" 
-                onchange="updateScore(${roundIndex}, ${playerIndex}, this.value)" />
-            </td>`;
-        });
-        table.appendChild(row);
-      });
-
-      // Totals row
-      const totalRow = document.createElement('tr');
-      totalRow.innerHTML = `<td><strong>Total</strong></td>`;
-
-      players.forEach((_, playerIndex) => {
-        let total = 0;
-        for (const round of rounds) {
-          total += round.scores[playerIndex] || 0;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callbreak Scorecard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
         }
-        totalRow.innerHTML += `<td><strong>${total}</strong></td>`;
-      });
+        .setup-screen, .game-screen {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .hidden-screen {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+        .visible-screen {
+            opacity: 1;
+        }
+        .modal-backdrop {
+            transition: background-color 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
-      table.appendChild(totalRow);
-    }
-  </script>
+    <div class="w-full max-w-4xl mx-auto">
 
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="setup-screen visible-screen">
+            <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl text-center">
+                <h1 class="text-4xl font-bold text-cyan-400 mb-2">Callbreak Scorecard</h1>
+                <p class="text-gray-400 mb-8">Enter player names to begin the game.</p>
+                
+                <div id="player-inputs" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <input type="text" placeholder="Player 1 Name" class="player-name-input bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition">
+                    <input type="text" placeholder="Player 2 Name" class="player-name-input bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition">
+                    <input type="text" placeholder="Player 3 Name" class="player-name-input bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition">
+                    <input type="text" placeholder="Player 4 Name" class="player-name-input bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition">
+                </div>
+
+                <button id="start-game-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-4 rounded-lg text-lg shadow-lg hover:shadow-cyan-500/50 transition-all duration-300 transform hover:scale-105">
+                    Start Game
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="game-screen hidden-screen w-full">
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-cyan-400">Game On!</h1>
+                        <p id="round-indicator" class="text-gray-400">Round 1 of 5</p>
+                    </div>
+                    <button id="new-game-btn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-red-500/50 transition-all duration-300">New Game</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead id="scoreboard-head">
+                            <!-- Header will be generated by JS -->
+                        </thead>
+                        <tbody id="scoreboard-body">
+                            <!-- Round data will be generated by JS -->
+                        </tbody>
+                        <tfoot id="scoreboard-foot">
+                            <!-- Totals will be generated by JS -->
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div id="winner-display" class="mt-6 text-center text-2xl font-bold text-yellow-400 p-4 bg-gray-700/50 rounded-lg hidden"></div>
+
+                <button id="action-btn" class="mt-8 w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-4 rounded-lg text-lg shadow-lg hover:shadow-cyan-500/50 transition-all duration-300 transform hover:scale-105">
+                    Enter Calls
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Round Score Modal -->
+    <div id="score-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md transform scale-95 modal-content">
+            <h2 id="modal-title" class="text-2xl font-bold mb-6 text-center text-cyan-400"></h2>
+            <form id="score-form">
+                <div id="modal-inputs" class="space-y-4 mb-8">
+                    <!-- Modal inputs will be generated by JS -->
+                </div>
+                <div class="flex gap-4">
+                    <button type="button" id="cancel-modal-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition-all">Cancel</button>
+                    <button type="submit" id="save-modal-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-lg transition-all">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM ELEMENTS ---
+            const setupScreen = document.getElementById('setup-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const startGameBtn = document.getElementById('start-game-btn');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const actionBtn = document.getElementById('action-btn');
+            const winnerDisplay = document.getElementById('winner-display');
+            
+            const scoreModal = document.getElementById('score-modal');
+            const scoreForm = document.getElementById('score-form');
+            const modalTitle = document.getElementById('modal-title');
+            const modalInputs = document.getElementById('modal-inputs');
+            const cancelModalBtn = document.getElementById('cancel-modal-btn');
+            
+            const scoreboardHead = document.getElementById('scoreboard-head');
+            const scoreboardBody = document.getElementById('scoreboard-body');
+            const scoreboardFoot = document.getElementById('scoreboard-foot');
+            const roundIndicator = document.getElementById('round-indicator');
+
+            // --- GAME STATE ---
+            let players = [];
+            let scores = []; // Array of arrays of objects: {call: num, won: num, points: num}
+            let currentRound = 0;
+            let roundPhase = 'calling'; // 'calling' or 'scoring'
+            const totalRounds = 5;
+
+            // --- EVENT LISTENERS ---
+            startGameBtn.addEventListener('click', startGame);
+            newGameBtn.addEventListener('click', resetGame);
+            actionBtn.addEventListener('click', handleActionButton);
+            cancelModalBtn.addEventListener('click', closeScoreModal);
+            scoreForm.addEventListener('submit', handleScoreSubmit);
+
+            // --- FUNCTIONS ---
+
+            function startGame() {
+                const nameInputs = document.querySelectorAll('.player-name-input');
+                const filledInputs = Array.from(nameInputs).filter(input => input.value.trim() !== '');
+                
+                if (filledInputs.length < 2) {
+                    const tempAlert = document.createElement('div');
+                    tempAlert.textContent = 'Please enter at least 2 player names.';
+                    tempAlert.className = 'fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-lg';
+                    document.body.appendChild(tempAlert);
+                    setTimeout(() => tempAlert.remove(), 3000);
+                    return;
+                }
+
+                players = filledInputs.map((input, index) => input.value.trim() || `Player ${index + 1}`);
+                resetGameData();
+
+                setupScreen.classList.remove('visible-screen');
+                setupScreen.classList.add('hidden-screen');
+                gameScreen.classList.remove('hidden-screen');
+                gameScreen.classList.add('visible-screen');
+
+                renderScoreboard();
+                updateUI();
+            }
+            
+            function resetGameData() {
+                scores = Array(players.length).fill(0).map(() => []);
+                currentRound = 0;
+                roundPhase = 'calling';
+            }
+
+            function renderScoreboard() {
+                // Clear previous state
+                scoreboardHead.innerHTML = '';
+                scoreboardBody.innerHTML = '';
+                scoreboardFoot.innerHTML = '';
+                winnerDisplay.classList.add('hidden');
+                actionBtn.classList.remove('hidden');
+
+                // Render Header
+                let headerHTML = '<tr><th class="p-3 text-sm font-semibold tracking-wide text-left text-gray-400 border-b-2 border-gray-700">Round</th>';
+                players.forEach(player => {
+                    headerHTML += `<th colspan="2" class="p-3 text-sm font-semibold tracking-wide text-center text-gray-300 border-b-2 border-gray-700">${player}</th>`;
+                });
+                headerHTML += '</tr><tr><th class="p-3 text-sm font-semibold tracking-wide text-left text-gray-400 border-b-2 border-gray-600"></th>';
+                players.forEach(() => {
+                    headerHTML += `<th class="p-2 text-xs font-medium tracking-wide text-center text-gray-500 border-b-2 border-gray-600">Call</th><th class="p-2 text-xs font-medium tracking-wide text-center text-gray-500 border-b-2 border-gray-600">Pts</th>`;
+                });
+                headerHTML += '</tr>';
+                scoreboardHead.innerHTML = headerHTML;
+
+                renderAllRoundRows();
+                renderTotals();
+            }
+
+            function renderAllRoundRows() {
+                scoreboardBody.innerHTML = '';
+                const roundsPlayed = scores.length > 0 ? scores[0].length : 0;
+                if (roundsPlayed > 0) {
+                    for (let i = 0; i < roundsPlayed; i++) {
+                        let rowHTML = `<tr class="bg-gray-800 hover:bg-gray-700/50 transition-colors"><td class="p-3 font-bold text-gray-300 border-b border-gray-700">${i + 1}</td>`;
+                        players.forEach((_, pIndex) => {
+                            const roundScore = scores[pIndex][i];
+                            const call = roundScore.call;
+                            const points = roundScore.points !== null ? roundScore.points : '-';
+                            const pointColor = points < 0 ? 'text-red-400' : (points === '-' ? 'text-gray-400' : 'text-green-400');
+                            
+                            rowHTML += `<td class="p-2 text-center border-b border-gray-700">${call}</td><td class="p-2 text-center font-semibold ${pointColor} border-b border-gray-700">${points}</td>`;
+                        });
+                        rowHTML += '</tr>';
+                        scoreboardBody.innerHTML += rowHTML;
+                    }
+                }
+            }
+
+            function renderTotals() {
+                let footerHTML = '<tr class="bg-gray-900"><td class="p-4 font-bold text-lg text-cyan-400">Total</td>';
+                const totalScores = calculateTotalScores();
+                totalScores.forEach(total => {
+                    const totalColor = total < 0 ? 'text-red-400' : 'text-green-400';
+                    footerHTML += `<td colspan="2" class="p-4 text-center font-bold text-lg ${totalColor}">${total}</td>`;
+                });
+                footerHTML += '</tr>';
+                scoreboardFoot.innerHTML = footerHTML;
+            }
+
+            function calculateTotalScores() {
+                return players.map((_, pIndex) => {
+                    return scores[pIndex].reduce((sum, round) => sum + (round.points || 0), 0);
+                });
+            }
+            
+            function updateUI() {
+                if (currentRound >= totalRounds) {
+                    endGame();
+                    return;
+                }
+                
+                roundIndicator.textContent = `Round ${currentRound + 1} of ${totalRounds}`;
+                if (roundPhase === 'calling') {
+                    actionBtn.textContent = 'Enter Calls';
+                } else {
+                    actionBtn.textContent = 'Enter Tricks Won';
+                }
+            }
+
+            function handleActionButton() {
+                if (currentRound >= totalRounds) return;
+                openScoreModal();
+            }
+
+            function openScoreModal() {
+                modalInputs.innerHTML = ''; 
+
+                if (roundPhase === 'calling') {
+                    modalTitle.textContent = `Enter Calls for Round ${currentRound + 1}`;
+                    players.forEach((player, index) => {
+                        const inputGroup = `
+                            <div class="grid grid-cols-2 gap-4 items-center">
+                                <label class="text-gray-300 font-medium">${player}</label>
+                                <input type="number" placeholder="Call" data-player-index="${index}" name="call" class="bg-gray-700 border border-gray-600 rounded-md p-2 text-center focus:outline-none focus:ring-2 focus:ring-cyan-500" min="1" max="8" required>
+                            </div>
+                        `;
+                        modalInputs.innerHTML += inputGroup;
+                    });
+                } else { // 'scoring' phase
+                    modalTitle.textContent = `Enter Tricks Won for Round ${currentRound + 1}`;
+                    players.forEach((player, index) => {
+                        const currentCall = scores[index][currentRound].call;
+                        const inputGroup = `
+                            <div class="grid grid-cols-3 gap-2 items-center">
+                                <label class="col-span-1 text-gray-300 font-medium">${player}</label>
+                                <span class="col-span-1 text-center text-gray-400 bg-gray-700/50 py-2 rounded-md">Call: ${currentCall}</span>
+                                <input type="number" placeholder="Won" data-player-index="${index}" name="won" class="col-span-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-center focus:outline-none focus:ring-2 focus:ring-cyan-500" min="0" max="13" required>
+                            </div>
+                        `;
+                        modalInputs.innerHTML += inputGroup;
+                    });
+                }
+
+                scoreModal.classList.remove('hidden');
+                setTimeout(() => {
+                    scoreModal.querySelector('.modal-content').classList.add('scale-100');
+                    scoreModal.classList.remove('bg-opacity-0');
+                    scoreModal.classList.add('bg-opacity-70');
+                }, 10);
+            }
+
+            function closeScoreModal() {
+                scoreModal.querySelector('.modal-content').classList.remove('scale-100');
+                scoreModal.classList.remove('bg-opacity-70');
+                scoreModal.classList.add('bg-opacity-0');
+                setTimeout(() => scoreModal.classList.add('hidden'), 300);
+            }
+
+            function handleScoreSubmit(e) {
+                e.preventDefault();
+                if (roundPhase === 'calling') {
+                    const callInputs = e.target.querySelectorAll('input[name="call"]');
+                    callInputs.forEach((input, index) => {
+                        const call = parseInt(input.value);
+                        if (isNaN(call)) return;
+                        scores[index].push({ call: call, won: null, points: null });
+                    });
+                    roundPhase = 'scoring';
+                } else { // 'scoring' phase
+                    const wonInputs = e.target.querySelectorAll('input[name="won"]');
+                    wonInputs.forEach((input, index) => {
+                        const won = parseInt(input.value);
+                        if (isNaN(won)) return;
+                        
+                        const roundData = scores[index][currentRound];
+                        roundData.won = won;
+                        
+                        let points = 0;
+                        const call = roundData.call;
+
+                        if (won < call) {
+                            // Rule: Fail to meet call
+                            points = -(call * 10);
+                        } else if (won >= call + 3) {
+                            // Rule: Penalty for winning 3 or more extra tricks
+                            points = -(call * 10);
+                        } else {
+                            // Rule: Successful call
+                            points = (call * 10) + (won - call);
+                        }
+                        
+                        roundData.points = points;
+                    });
+                    roundPhase = 'calling';
+                    currentRound++;
+                }
+                
+                renderAllRoundRows();
+                renderTotals();
+                updateUI();
+                closeScoreModal();
+            }
+
+            function endGame() {
+                actionBtn.classList.add('hidden');
+                const totalScores = calculateTotalScores();
+                const maxScore = Math.max(...totalScores);
+                const winnerIndex = totalScores.indexOf(maxScore);
+                const winnerName = players[winnerIndex];
+
+                winnerDisplay.textContent = `🎉 Winner: ${winnerName} with ${maxScore} points! 🎉`;
+                winnerDisplay.classList.remove('hidden');
+            }
+
+            function resetGame() {
+                players = [];
+                resetGameData();
+                document.querySelectorAll('.player-name-input').forEach(input => input.value = '');
+
+                gameScreen.classList.remove('visible-screen');
+                gameScreen.classList.add('hidden-screen');
+                setupScreen.classList.remove('hidden-screen');
+                setupScreen.classList.add('visible-screen');
+            }
+        });
+    </script>
 </body>
 </html>
